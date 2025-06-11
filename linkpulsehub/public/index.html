@@ -101,6 +101,7 @@
     }
     .error { color: #e71d36; margin-bottom: 15px; }
     .success { color: #2ec4b6; margin-bottom: 15px; }
+    .loading { text-align: center; padding: 20px; }
   </style>
 </head>
 <body>
@@ -108,6 +109,10 @@
 
   <script type="text/babel">
     const { useState, useEffect } = React;
+
+    // Set API base URL
+    const API_BASE = window.location.origin;
+    axios.defaults.baseURL = API_BASE;
 
     // Auth Context
     const AuthContext = React.createContext();
@@ -126,7 +131,10 @@
               setUser(res.data);
               setIsAuthenticated(true);
             })
-            .catch(() => localStorage.removeItem('token'))
+            .catch(() => {
+              localStorage.removeItem('token');
+              delete axios.defaults.headers.common['Authorization'];
+            })
             .finally(() => setLoading(false));
         } else {
           setLoading(false);
@@ -160,7 +168,11 @@
       };
 
       const logout = async () => {
-        await axios.post('/api/auth/logout');
+        try {
+          await axios.post('/api/auth/logout');
+        } catch (e) {
+          console.log('Logout error', e);
+        }
         localStorage.removeItem('token');
         delete axios.defaults.headers.common['Authorization'];
         setUser(null);
@@ -327,7 +339,7 @@
             const backlinksRes = await axios.get('/api/backlinks');
             setBacklinks(backlinksRes.data);
           } catch (err) {
-            console.error(err);
+            console.error('Fetch error:', err);
           }
         };
         
@@ -359,7 +371,11 @@
         
         try {
           setUploading(true);
-          const res = await axios.post('/api/backlinks/upload', formData);
+          const res = await axios.post('/api/backlinks/upload', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
           setUploading(false);
           setSuccess(`Uploaded ${res.data.success} backlinks successfully!`);
           setFile(null);
@@ -369,7 +385,7 @@
           setBacklinks(backlinksRes.data);
         } catch (err) {
           setUploading(false);
-          setError('Error uploading file');
+          setError(err.response?.data?.msg || 'Error uploading file');
         }
       };
 
@@ -482,7 +498,7 @@
       
       if (loading) {
         return (
-          <div className="container">
+          <div className="loading">
             <p>Loading...</p>
           </div>
         );
