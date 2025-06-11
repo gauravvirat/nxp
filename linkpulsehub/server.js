@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const xlsx = require('xlsx');
-const axios = require('axios');
+const path = require('path');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -84,13 +84,32 @@ const initializeSites = async () => {
 mongoose.connection.once('open', initializeSites);
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'https://nxp-backend.onrender.com',
+  'https://nxp-frontend.onrender.com',
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 app.use(express.json());
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Auth Middleware
 const auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization').replace('Bearer ', '');
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) throw new Error();
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findOne({ _id: decoded.id, 'tokens.token': token });
 
@@ -108,21 +127,11 @@ const auth = async (req, res, next) => {
 
 // Utility Functions
 const getSpamScore = async (url) => {
-  try {
-    // Simulate spam score API
-    return Math.floor(Math.random() * 100);
-  } catch (err) {
-    return Math.floor(Math.random() * 100);
-  }
+  return Math.floor(Math.random() * 100);
 };
 
 const checkUrlStatus = async (url) => {
-  try {
-    // In a real app, this would be an actual check
-    return Math.random() > 0.2; // 80% chance of being live
-  } catch (err) {
-    return false;
-  }
+  return Math.random() > 0.2;
 };
 
 // Auth Routes
@@ -165,6 +174,10 @@ app.post('/api/auth/logout', auth, async (req, res) => {
   } catch (err) {
     res.status(500).send('Server error');
   }
+});
+
+app.get('/api/auth/user', auth, async (req, res) => {
+  res.json(req.user);
 });
 
 // Backlink Routes
@@ -282,6 +295,11 @@ app.get('/api/sites', async (req, res) => {
   }
 });
 
+// Serve frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Start Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
