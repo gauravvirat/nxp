@@ -103,7 +103,6 @@ app.use(express.json());
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
-
 // Auth Middleware
 const auth = async (req, res, next) => {
   try {
