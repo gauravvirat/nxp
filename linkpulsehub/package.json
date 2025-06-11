@@ -2,8 +2,11 @@
   "name": "linkpulsehub",
   "version": "1.0.0",
   "scripts": {
-    "start": "node server.js"
+    "install": "cd src && npm install",
+    "start": "cd src && node server.js"
   },
+ 
+}
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
